@@ -1,0 +1,16 @@
+
+.MouseTouch{  }
+.MouseTouch .panel{ 
+    width: 79%;
+    margin: 2% 10%;
+    padding: 1em 2em;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+.MouseTouch .ngClick{ 
+    
+}
+.MouseTouch .swipe{ 
+    
+}

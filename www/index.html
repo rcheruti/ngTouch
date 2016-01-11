@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ngTouch Module</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        
+        <script src="libs/angular/angular.min.js"></script>
+        <script src="libs/angular/angular-route.min.js"></script>
+        <script src="libs/angular/angular-animate.min.js"></script>
+        <script src="libs/angular-ui-router.min.js"></script>
+        <script src="build/ngTouch.min.js"></script>
+        
+        <link href="css/index.css" rel="stylesheet" type="text/css" />
+        <link href="styles.css" rel="stylesheet" type="text/css" />
+        
+        <script>
+            window.Module = angular.module('Module',['ngAnimate','ngTouch']);
+            
+            Module.controller('MouseTouch',['$scope','$element','$swipe',
+                    function($scope,$element,$swipe){
+                console.log('MouseTouch $element', $element);
+                
+                    // for ngClick test
+                $scope.ngClick = function(ev){
+                    console.log('ngClick', ev);
+                };
+                
+                    // for '$swipe' test
+                var el = $element.find('div').eq(1);
+                $swipe.bind( el, {
+                    tap: function(pos, ev){
+                        console.log('$swipe tap:', pos, ev);
+                    },
+                    start: function(pos, ev){
+                        console.log('$swipe start:', pos, ev);
+                    },
+                    move: function(pos, ev){
+                        console.log('$swipe move:', pos, ev);
+                    },
+                    end: function(pos, ev){
+                        console.log('$swipe end:', pos, ev);
+                    },
+                    cancel: function(pos, ev){
+                        console.log('$swipe cancel:', pos, ev);
+                    },
+                } );
+                
+                    // for native mouse test
+                var el = $element.find('div').eq(2)[0];
+                el.addEventListener('mousedown',function(ev){ console.log('native mousedown', ev); });
+                el.addEventListener('mousemove',function(ev){ console.log('native mousemove', ev); });
+                el.addEventListener('mouseup',function(ev){ console.log('native mouseup', ev); });
+                el.addEventListener('click',function(ev){ console.log('native click', ev); });
+                
+                    // for native touch test
+                var el = $element.find('div').eq(3)[0];
+                el.addEventListener('touchstart',function(ev){ console.log('native touchstart', ev); });
+                el.addEventListener('touchmove',function(ev){ console.log('native touchmove', ev); });
+                el.addEventListener('touchend',function(ev){ console.log('native touchend', ev); });
+                
+                    // for native mouse test
+                var el = $element.find('div').eq(4)[0];
+                el.addEventListener('mousedown',function(ev){ console.log('both native mousedown', ev); });
+                el.addEventListener('mousemove',function(ev){ console.log('both native mousemove', ev); });
+                el.addEventListener('mouseup',function(ev){ console.log('both native mouseup', ev); });
+                el.addEventListener('click',function(ev){ console.log('both native click', ev); });
+                el.addEventListener('touchstart',function(ev){ console.log('both native touchstart', ev); });
+                el.addEventListener('touchmove',function(ev){ console.log('both native touchmove', ev); });
+                el.addEventListener('touchend',function(ev){ console.log('both native touchend', ev); });
+                
+            }]);
+        </script>
+        
+    </head>
+    <body ng-app="Module" ng-strict-di="true">
+        
+        <div ng-controller="MouseTouch" class="MouseTouch">
+            <div class="panel ngClick" ng-click="ngClick()">Click in this div</div>
+            <div class="panel swipe" >This is with $swipe directive</div>
+            <div class="panel nativeMouse" >This is with native mouse</div>
+            <div class="panel nativeTouch" >This is with native touch</div>
+            <div class="panel nativeBoth" >This is with both native mouse and touch</div>
+            
+        </div>
+        
+    </body>
+</html>
