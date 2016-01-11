@@ -72,6 +72,11 @@
                 el.addEventListener('touchmove',function(ev){ console.log('both native touchmove', ev); });
                 el.addEventListener('touchend',function(ev){ console.log('both native touchend', ev); });
                 
+                
+                    // to test the ngSwipeX directives
+                $scope.swipeLeft = function(){ console.log('swipeLeft'); };
+                $scope.swipeRight = function(){ console.log('swipeRight'); };
+                
             }]);
         </script>
         
@@ -85,6 +90,9 @@
             <div class="panel nativeTouch" >This is with native touch</div>
             <div class="panel nativeBoth" >This is with both native mouse and touch</div>
             
+            <br/>
+            <div class="panel ngSwipeLeft" ng-swipe-left="swipeLeft()">Swipe left</div>
+            <div class="panel ngSwipeRight" ng-swipe-right="swipeRight()">Swipe right</div>
         </div>
         
     </body>
