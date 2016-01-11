@@ -38,6 +38,9 @@
                     move: function(pos, ev){
                         console.log('$swipe move:', pos, ev);
                     },
+                    drag: function(pos, ev){
+                        console.log('$swipe drag:', pos, ev);
+                    },
                     end: function(pos, ev){
                         console.log('$swipe end:', pos, ev);
                     },
@@ -76,7 +79,7 @@
     <body ng-app="Module" ng-strict-di="true">
         
         <div ng-controller="MouseTouch" class="MouseTouch">
-            <div class="panel ngClick" ng-click="ngClick()">Click in this div</div>
+            <div class="panel ngClick" ng-click="ngClick()">This is with ngClick</div>
             <div class="panel swipe" >This is with $swipe directive</div>
             <div class="panel nativeMouse" >This is with native mouse</div>
             <div class="panel nativeTouch" >This is with native touch</div>
