@@ -1,0 +1,45 @@
+
+/* ============  global styles  ============= */
+*{
+    font-family: Arial;
+    font-size: 1em;
+}
+
+/* ============  Menu styles  ============= */
+.menu{
+    height:100%;
+    position:absolute;
+    left: 0;
+    width: 30%;
+    box-shadow: 1px 0px 2px #ccc;
+    border-right: 1px solid #bbb;
+}
+.menu > a{
+    display: block;
+    padding: 10px 8px;
+    
+}
+.menu > a:hover{
+    background: lightyellow;
+}
+.menu > a.active{
+    background: lightcyan;
+}
+
+/* ============  content styles  ============= */
+.conteudo{
+    height:100%;
+    position:absolute;
+    right: 0;
+    width: 70%;
+}
+.conteudo > *{
+    height:100%;
+}
+
+/* ============  general styles  ============= */
+.description{
+    padding: 0.4em ;
+    width: 100%;
+    text-align: left;
+}

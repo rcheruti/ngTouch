@@ -1,0 +1,16 @@
+
+.Clicks{  }
+.Clicks .panel{ 
+    width: 79%;
+    margin: 2% 10%;
+    padding: 0.5em 0.5em;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+}
+.Clicks .ngClick{ 
+    
+}
+.Clicks .swipe{ 
+    
+}

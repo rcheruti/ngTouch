@@ -11,7 +11,7 @@
  * 
  * 
  */
-ngTouch.provider('$swipe', [
+ngTouch.provider('$swipe',[
         function() {
   
   // names for minifying:
@@ -84,6 +84,11 @@ ngTouch.provider('$swipe', [
       y: e.clientY
     };
   }
+  function checkHandlers( swiper, handlersArr ){
+    var h = swiper[__eventHandlers];
+    for(var i=0; i<handlersArr.length; i++) if( handlersArr[i] in h ) return true;
+    return false;
+  }
   
   /*
   //  Get the target element from the event, appling all the hacks needed
@@ -98,17 +103,18 @@ ngTouch.provider('$swipe', [
   }
   */
   
-  function Swiper(){
+  function Swiper(config){
     var that = this;
-    that[__element] = null;
-    that[__eventHandlers] = null;
+    if(!(config instanceof Object)) config = {};
+    that[__element] = config[__element];
+    that[__eventHandlers] = config[__eventHandlers];
     
-    that[__tapDuration] = provider[__tapDuration];
-    that[__moveTolerance] = provider[__moveTolerance];
-    that[__preventDuration] = provider[__preventDuration];
-    that[__moveBufferRadius] = provider[__moveBufferRadius] ;
-    that[__preventMouseFromTouch] = provider[__preventMouseFromTouch];
-    that[__preventMoveFromDrag] = provider[__preventMoveFromDrag];
+    that[__tapDuration] = config[__tapDuration] || provider[__tapDuration];
+    that[__moveTolerance] = config[__moveTolerance] || provider[__moveTolerance];
+    that[__preventDuration] = config[__preventDuration] || provider[__preventDuration];
+    that[__moveBufferRadius] = config[__moveBufferRadius] || provider[__moveBufferRadius] ;
+    that[__preventMouseFromTouch] = config[__preventMouseFromTouch] || provider[__preventMouseFromTouch];
+    that[__preventMoveFromDrag] = config[__preventMoveFromDrag] || provider[__preventMoveFromDrag];
     
     that[__hasTouchEvents] = false; // to find if this browser has touch events (need to stay in separate var!)
     that[__lastStartEvent] = null;
@@ -201,6 +207,10 @@ ngTouch.provider('$swipe', [
   };
   
   
+  function Context(){
+    
+  }
+  
   //==============================================================
   
     /**
@@ -220,184 +230,101 @@ ngTouch.provider('$swipe', [
      * which is to be watched for swipes, and an object with four handler functions. See the
      * documentation for `bind` below.
      */
-  this.$get = [function(){ 
-      
+  this.$get = ['$rootElement','$timeout',function($rootElement,$timeout){ 
+    
+    // first, last setup the 'ghostclick' handler on the '$rootElement' on bubbling fase:
+    var _swipers = [],
+        _swiperEventsProps = [ __lastStartEvent, __lastMoveEvent, __lastEndEvent, __lastCancelEvent ],
+        $rootElementEl = $rootElement[0];
+    
+    $rootElementEl.addEventListener('mousedown',_ghostclick,true);
+    $rootElementEl.addEventListener('mousemove',_ghostclick,true);
+    $rootElementEl.addEventListener('mouseup',_ghostclick,true);
+    $rootElementEl.addEventListener('click',_ghostclick,true);
+    function setupSwiperGhostClick( swiper ){
+      function _timeoutHandler(){ 
+        for(var i=0; i<_swipers.length; i++){ 
+          if( _swipers[i] === swiper ){
+            _swipers.splice( i, 1 );
+            break; 
+          }
+        } 
+      }
+      _swipers.push( swiper );
+      $timeout( _timeoutHandler, swiper[__preventDuration] );
+    }
+    function _ghostclick(mouseEvent){
+      var swiper = null, _break = false;
+      for(var i=0; i<_swipers.length; i++){
+        swiper = _swipers[i];
+        if( !swiper[__preventMouseFromTouch] )continue;
+        for(var y=0; y<_swiperEventsProps.length; y++){
+          var mousePos = getCoordinates( mouseEvent );
+          var touchPos = getCoordinates( swiper[_swiperEventsProps[y]] );
+          if( touchPos.x === mousePos.x && touchPos.y === mousePos.y ){
+              // is ghost click!
+            mouseEvent.preventDefault();
+            mouseEvent.stopPropagation();
+            _break = true;
+            break;
+          }
+        }
+        if( _break ) break;
+      }
+    }
+    
+    /* */
+    
+    // now, our service handlers:
     function onFunc(element, eventHandlers, config) {
-        if( !config ) config = {}; // make ever an object
+        if(!(config instanceof Object)) config = {};
+        config[__element] = element;
+        config[__eventHandlers] = eventHandlers;
+        var swiper = new Swiper(config);
         
-          // vars to hold some configurations about the behavior of this element,
-          // first are the provider's defaults overrides
-        var  tapDuration =  config[__tapDuration] || provider[__tapDuration],
-          moveTolerance = config[__moveTolerance] || provider[__moveTolerance], 
-          preventDuration = config[__preventDuration] || provider[__preventDuration], 
-          //clickbusterThreshold = config.clickbusterThreshold || provider.clickbusterThreshold, 
-          moveBufferRadius = config[__moveBufferRadius] || provider[__moveBufferRadius] ,
-          preventMouseFromTouch = config[__preventMouseFromTouch] || provider[__preventMouseFromTouch], 
-          preventMoveFromDrag = config[__preventMoveFromDrag] || provider[__preventMoveFromDrag],
-
-          hasTouchEvents = false, // to find if this browser has touch events (need to stay in separate var!)
-          lastStartEvent = null,
-          lastMoveEvent = null,
-          lastEndEvent = null,
-          lastCancelEvent = null,
-
-          tapping = false, // to simulate the 'tap' event
-          dragging = false, // to simulate de 'drag' event
-          startTime,   // Used to check if the tap was held too long.
-          touchStartX,
-          touchStartY,
-          totalX,       // Absolute total movement, used to control swipe vs. scroll.
-          totalY,       // Absolute total movement, used to control swipe vs. scroll.
-          startCoords,  // Coordinates of the start position.
-          lastPos       // Last event's position.
-        ;
-
-        function resetState() {
-          tapping = false;
-          dragging = false;
-          element.removeClass(ACTIVE_CLASS_NAME);
-        }
-        function handleStart(eventFired){
-          lastStartEvent = eventFired;
-          tapping = true;
-          element.addClass(ACTIVE_CLASS_NAME);
-          startTime = Date.now();
-          var e = getEvent(eventFired);
-          touchStartX = e.clientX;
-          touchStartY = e.clientY;
-
-          dragging = true;
-          totalX = 0;
-          totalY = 0;
-          lastPos = startCoords = getCoordinates(e);
-          if( eventHandlers['start'] ) eventHandlers['start'](startCoords, eventFired);
-        }
-        function handleMove(eventFired){
-          var coords = getCoordinates(eventFired);
-          if( dragging ){
-            totalX += Math.abs(coords.x - lastPos.x);
-            totalY += Math.abs(coords.y - lastPos.y);
-            lastPos = coords;
-            if (totalX < moveBufferRadius && totalY < moveBufferRadius) {
-              return;
-            }
-            // One of totalX or totalY has exceeded the buffer, so decide on swipe vs. scroll.
-            if (totalY > totalX) {
-              // Allow native scrolling to take over.
-              handleCancel(eventFired);
-            } else {
-              // Prevent the browser from scrolling.
-              eventFired.preventDefault();
-              if( eventHandlers['drag'] ) eventHandlers['drag'](coords, eventFired);
-            }
-          }
-
-            // prevent the move if the drag was fired?
-          if( !(preventMoveFromDrag && dragging) ){
-            if( eventHandlers['move'] ) eventHandlers['move'](coords, eventFired);
-          }
-
-        }
-        function handleEnd(eventFired){
-          lastEndEvent = eventFired;
-          var diff = Date.now() - startTime;
-          var e = getEvent(eventFired);
-          var x = e.clientX;
-          var y = e.clientY;
-          var dist = Math.sqrt(Math.pow(x - touchStartX, 2) + Math.pow(y - touchStartY, 2));
-          var coords = getCoordinates(e);
-
-            // check if this is a tap:
-          if (tapping && diff < tapDuration && dist < moveTolerance){
-            if( eventHandlers['tap'] ) eventHandlers['tap'](coords, eventFired);
-          }
-
-          if( eventHandlers['end'] ) eventHandlers['end'](coords, eventFired);
-          resetState();
-        }
-        function handleCancel(eventFired){
-          lastCancelEvent = eventFired;
-          if( eventHandlers['cancel'] ) eventHandlers['cancel']( eventFired );
-          resetState();
-        }
-
-
         // ===  Touch events  ===
-        element.on('touchstart', function(eventFired){
-          hasTouchEvents = true;
-          handleStart(eventFired);
-        });
-
-        element.on('touchmove', function(eventFired){
-          hasTouchEvents = true;
-          handleMove(eventFired);
-        });
-
-        element.on('touchend', function(eventFired) {
-          hasTouchEvents = true;
-          handleEnd(eventFired);
-        });
-
-        element.on('touchcancel', function(eventFired) {
-          hasTouchEvents = true;
-          handleCancel(eventFired);
-        });
-
+        if( checkHandlers( swiper, ['start','tap','drag'] ) )  element.on('touchstart', _touchstart );
+        if( checkHandlers( swiper, ['drag'] ) )                element.on('touchmove', _touchmove );
+        if( checkHandlers( swiper, ['end','tap','drag'] ) )    element.on('touchend', _touchend );
+        if( checkHandlers( swiper, ['cancel'] ) )              element.on('touchcancel', _touchcancel );
         // ===  Mouse events  ===
-          // mouse events are a bit different from touch just to prevent they from double touching the UI
-
-        element.on('mousedown', function(eventFired) {
-          if( preventMouseFromTouch && hasTouchEvents && lastStartEvent && (eventFired.timeStamp - lastStartEvent.timeStamp < preventDuration) ){
-            eventFired.preventDefault();
-            eventFired.stopPropagation();
-            return; // just stop this event and return
-          }
-          handleStart(eventFired);
-        });
-
-        element.on('mousemove', function(eventFired) {
-          // we need a little hack here:
-          // the 'mousemove' event is fired after a 'touchend' (in the same position/coordinates)
-          // if the 'tap' is too fast. e.g.: if we tap too fast the mousemove wil be fired.
-          // To workaround that a check need to be done verifying if 'hasTouchEvents' is TRUE (we have touchs,
-          // 'touchstart', maybe set it), 'lastMoveEvent' is FALSE/UNDEFINED (so 'touchmove' was never fired,
-          // in notebooks we touch screen maybe this is realy possible (need tests!)) and if
-          // the coordinates (getCoordinates(...)) of the 'mousemove' and 'touchend' are the same.
-          // With these conditions we have a "fake mousemove event".
-          // 
-          // Also 'preventMouseFromTouch' need to be TRUE at the moment (this is just impl. decision).
-          // 
-          // > this hapens in "Chrome developer tools on device mode with touch simulator active"
-          //
-
-          if( preventMouseFromTouch && hasTouchEvents ){ 
-            if( !lastMoveEvent ){
-              var touchendCoords = getCoordinates(lastEndEvent),
-                  mousemoveCoords = getCoordinates(eventFired);
-              if( touchendCoords.x === mousemoveCoords.x && touchendCoords.y === mousemoveCoords.y ){
-                eventFired.preventDefault();
-                eventFired.stopPropagation();
-                return; // just stop this event and return
-              }
-            }else if(lastMoveEvent && (eventFired.timeStamp - lastMoveEvent.timeStamp < preventDuration)){
-              eventFired.preventDefault();
-              eventFired.stopPropagation();
-              return; // just stop this event and return
-            }
-          }
-          handleMove(eventFired);
-        });
-
-        element.on('mouseup', function(eventFired) {
-          if( preventMouseFromTouch && hasTouchEvents && lastEndEvent && (eventFired.timeStamp - lastEndEvent.timeStamp < preventDuration) ){
-            eventFired.preventDefault();
-            eventFired.stopPropagation();
-            return; // just stop this event and return
-          }
-          handleEnd(eventFired);
-        });
-
-
+        if( checkHandlers( swiper, ['start','tap','drag'] ) )  element.on('mousedown', _mousedown );
+        if( checkHandlers( swiper, ['move','drag'] ) )         element.on('mousemove', _mousemove );
+        if( checkHandlers( swiper, ['end','tap','drag'] ) )    element.on('mouseup', _mouseup );
+        
+        return swiper ;
+        
+        // =========  Handlers  =========
+        function _touchstart(eventFired){
+          swiper[__hasTouchEvents] = true;
+          setupSwiperGhostClick( swiper );
+          swiper[__handleStart](eventFired);
+        }
+        function _touchmove(eventFired){
+          swiper[__hasTouchEvents] = true;
+          setupSwiperGhostClick( swiper );
+          swiper[__handleMove](eventFired);
+        }
+        function _touchend(eventFired) {
+          swiper[__hasTouchEvents] = true;
+          setupSwiperGhostClick( swiper );
+          swiper[__handleEnd](eventFired);
+        }
+        function _touchcancel(eventFired) {
+          swiper[__hasTouchEvents] = true;
+          setupSwiperGhostClick( swiper );
+          swiper[__handleCancel](eventFired);
+        }
+        function _mousedown(eventFired) {
+          swiper[__handleStart](eventFired);
+        }
+        function _mousemove(eventFired) {
+          swiper[__handleMove](eventFired);
+        }
+        function _mouseup(eventFired) {
+          swiper[__handleEnd](eventFired);
+        }
+        
       }
     
     function offFunc(){  }

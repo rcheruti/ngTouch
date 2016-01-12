@@ -12,14 +12,19 @@ module.exports = function (grunt) {
     var p = {
         dev: 'src/',
         temp: 'www_temp/',
-        www: 'www/build/',
-        dist: 'dist/'
+        www: 'www/',
+        dist: 'dist/',
+        test: 'test/'
     };
     var c = {
         dist: {
             concat: p.temp+'ngTouch.js',
             dist: p.dist+'ngTouch.min.js',
-            build: p.www+'ngTouch.min.js'
+            build: p.test+'build/ngTouch.min.js'
+        },
+        test: {
+            js: p.www+'scripts.js',
+            css: p.www+'styles.css',
         }
     };
     
@@ -27,7 +32,8 @@ module.exports = function (grunt) {
     grunt.initConfig({
         clean:{
             build:[p.www,p.dist],
-            temp:[p.temp]
+            temp:[p.temp],
+            dist:[c.dist.build]
         },
         concat:{
             dist:{
@@ -40,6 +46,27 @@ module.exports = function (grunt) {
                     //p.dev+ 'sufix.txt'
                 ],
                 dest: c.dist.concat
+            },
+            test:{
+                src:[
+                    p.test+ 'libs/angular/angular.min.js',
+                    p.test+ 'libs/angular/**',
+                    p.test+ 'libs/angular-ui-router.min.js',
+                    p.test+ 'build/**',
+                    //p.test+ 'libs/angular-touch.original.min.js',
+                    p.test+ '*.js',
+                    p.test+ 'test/**/*.js',
+                ],
+                dest: c.test.js
+            },
+            test_css: {
+                src:[
+                    p.test+ 'index.css',
+                    p.test+ 'styles.css',
+                    p.test+ 'test/*.css',
+                    p.test+ 'test/**/*.css',
+                ],
+                dest: c.test.css
             }
         },
         uglify:{
@@ -58,12 +85,19 @@ module.exports = function (grunt) {
                     src: c.dist.build,
                     dest: c.dist.dist
                 }]
+            },
+            test:{
+                files:[{
+                    expand: true,
+                    cwd: p.test,
+                    src: ['**.html', '**/*.html'],
+                    dest: p.www
+                }]
             }
         }
     });
     
     
-    
-    grunt.registerTask('default',['clean','concat','uglify','copy']); 
+    grunt.registerTask('default',['clean','concat:dist','uglify','copy','concat:test','concat:test_css']); 
     
 };
