@@ -44,7 +44,8 @@ ngTouch.provider('$swipe',[
       __handleMove = 'handleMove',
       __$scope = '$scope',
       __callApply = 'callApply',
-      __callDestroy = 'callDestroy'
+      __callDestroy = 'callDestroy',
+      __blurGhostClickElement = 'blurGhostClickElement'
   ;
   
   var provider = this;
@@ -57,7 +58,7 @@ ngTouch.provider('$swipe',[
   provider[__preventMoveFromDrag] = true; // to prevent or not the 'move' event when the 'drag' event is been fired
   
   var ACTIVE_CLASS_NAME = 'ng-click-active';
-  var TAPHOLD_ACTIVE_CLASS = 'ng-taphold-active';
+  //var TAPHOLD_ACTIVE_CLASS = 'ng-taphold-active';
   
   /*
    * Events in the '$swipe':
@@ -102,7 +103,6 @@ ngTouch.provider('$swipe',[
     }
   }
   
-  /*
   //  Get the target element from the event, appling all the hacks needed
   function getElementFromEvent(event){
     event = getEvent(event);
@@ -113,14 +113,18 @@ ngTouch.provider('$swipe',[
     }
     return element ;
   }
-  */
+  
   
   /**
    * @ngdoc Class
    * @name Swiper
    * 
    * @description
-   * This is the Swiper class, used by the {@link ngTouch $swipe} module.
+   * This is the Swiper class, used by the {@link ngTouch $swipe} module to hold
+   * the configuration of the actual bind call.
+   * 
+   * Every time a 'bind call' is executed an instance of this class will be
+   * created to hold the configurations and to handle the events.
    * 
    * @param {object} config Configuration object to override the default values
    */
@@ -140,6 +144,7 @@ ngTouch.provider('$swipe',[
     that[__$scope] = config[__$scope] ;
     that[__callApply] = config[__callApply] || true ;
     that[__callDestroy] = config[__callDestroy] || true ;
+    that[__blurGhostClickElement] = config[__blurGhostClickElement] || true;
     
     
     that[__hasTouchEvents] = false; // to find if this browser has touch events (need to stay in separate var!)
@@ -253,17 +258,18 @@ ngTouch.provider('$swipe',[
      * which is to be watched for swipes, and an object with four handler functions. See the
      * documentation for `bind` below.
      */
-  this.$get = ['$rootElement','$timeout',function($rootElement,$timeout){ 
+  provider.$get = ['$rootElement','$timeout',function($rootElement,$timeout){ 
     
     // the below line is a piece of code from modernizr:
     // https://github.com/Modernizr/Modernizr/blob/master/feature-detects/touchevents.js
     var _hasTouch = !!(('ontouchstart' in window) || window.DocumentTouch && document instanceof DocumentTouch);
-    console.log( '_hasTouch', _hasTouch );
+    
     
     // first, last setup the 'ghostclick' handler on the '$rootElement' on bubbling fase:
     var _swipers = [],
         _swiperEventsProps = [ __lastStartEvent, __lastMoveEvent, __lastEndEvent, __lastCancelEvent ],
-        $rootElementEl = $rootElement[0];
+        $rootElementEl = $rootElement[0],
+        _lastLabelClickCoords = null;
     
     if( _hasTouch ){
       $rootElementEl.addEventListener('mousedown',_ghostclick,true); // can be thrown after a 'touchstart'
@@ -286,22 +292,44 @@ ngTouch.provider('$swipe',[
       $timeout( _timeoutHandler, swiper[__preventDuration] );
     }
     function _ghostclick(mouseEvent){
-      var swiper = null, _break = false, touchEvent = null;
+      var swiper = null, 
+          touchEvent = null,
+          mousePos = getCoordinates( mouseEvent );
+      // Work around desktop Webkit quirk where clicking a label will fire two clicks (on the label
+      // and on the input element). Depending on the exact browser, this second click we don't want
+      // to bust has either (0,0), negative coordinates, or coordinates equal to triggering label
+      // click event
+      if( ( mousePos.x < 1 && mousePos.y < 1 ) || // check: offscreen
+          ( // check: input click triggered by label click
+            _lastLabelClickCoords &&
+            _lastLabelClickCoords[0] === mousePos.x &&
+            _lastLabelClickCoords[1] === mousePos.y
+          ) ){
+        return; // let the second event fire
+      }
+      // remember label click coordinates to prevent click busting of trigger click event on input
+      // or reset label click coordinates on first subsequent click
+      _lastLabelClickCoords = (nodeName_(event.target) === 'label')? 
+          [mousePos.x, mousePos.y] : null ;
+      
+      outer:
       for(var i=0; i<_swipers.length; i++){
         swiper = _swipers[i];
         for(var y=0; y<_swiperEventsProps.length; y++){
           if( !(touchEvent = swiper[_swiperEventsProps[y]]) )continue;
-          var mousePos = getCoordinates( mouseEvent );
           var touchPos = getCoordinates( touchEvent );
           if( touchPos.x === mousePos.x && touchPos.y === mousePos.y ){
               // is ghost click!
             mouseEvent.preventDefault();
             mouseEvent.stopPropagation();
-            _break = true;
-            break;
+              // blur the element
+            if( swiper[__blurGhostClickElement] ){
+              var el = getElementFromEvent( mouseEvent );
+              if( el.blur ) el.blur();
+            }
+            break outer;
           }
         }
-        if( _break ) break;
       }
     }
     
@@ -329,6 +357,7 @@ ngTouch.provider('$swipe',[
             offFunc();
           });
         }
+        
         return swiper ;
         
         // =========  Handlers  =========

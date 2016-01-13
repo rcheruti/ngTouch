@@ -38,12 +38,13 @@ module.exports = function (grunt) {
         concat:{
             dist:{
                 src:[
-                    //p.dev+ 'prefix.txt',
+                    p.dev+ 'prefix.txt',
                     p.dev+ 'touch.js',
                     p.dev+ 'swipe.js',
-                    p.dev+ 'directive/**'
+                    p.dev+ 'directive/**',
+                    p.dev+ 'classes/**',
                     //p.dev+ '**',
-                    //p.dev+ 'sufix.txt'
+                    p.dev+ 'sufix.txt'
                 ],
                 dest: c.dist.concat
             },
