@@ -14,6 +14,7 @@ Module.controller('Clicks',['$scope','$element','$swipe',
       },
       start: function(pos, ev){
           console.log('$swipe start:', pos, ev);
+          el.addClass('clickstart');
       },
       move: function(pos, ev){
           console.log('$swipe move:', pos, ev);
@@ -23,6 +24,7 @@ Module.controller('Clicks',['$scope','$element','$swipe',
       },
       end: function(pos, ev){
           console.log('$swipe end:', pos, ev);
+          el.removeClass('clickstart');
       },
       cancel: function(pos, ev){
           console.log('$swipe cancel:', pos, ev);

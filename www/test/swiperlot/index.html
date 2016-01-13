@@ -1,0 +1,30 @@
+
+<div ng-controller="SwiperLot" class="SwiperLot">
+    
+    <div class="description">
+        This test make a lot of calls to "$swipe.bind". <br/><br/>
+        Some of then with a scope, some without. <br/><br/>
+        We want to see how much memory is consumed without the scope parameter,
+        and how much memory is consumed with the scope parameter. <br/><br/>
+        This is to test if the scope parameter is been used properly by the Swiper
+        class to release, or avoid waste more, memory that doesn't is necessary.
+    </div>
+    
+    <br/>
+    <div>
+        <span>Configurations:</span><br/>
+        <label for="SwiperLot_limit">Iterations: </label><input name="SwiperLot_limit" ng-model="limit"/>
+    </div>
+    
+    <br/>
+    <div class="without">
+        <button ng-click="callWithout()">Test without Scope</button>
+        <span>Progress: <span>{{ wout.msg }}</span></span>
+    </div>
+    
+    <div class="with">
+        <button ng-click="callWith()">Test with a Scope</button>
+        <span>Progress: <span>{{ w.msg }}</span></span>
+    </div>
+    
+</div>

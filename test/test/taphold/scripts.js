@@ -17,8 +17,10 @@ Module.controller('TapHold',['$scope','$element','$swipe',
       toShow.addClass('realyShowing');
     }
   }, {$scope: $scope} );
+  console.log( $scope );
   
   $scope.hide = function(){
+    console.log('hiding');
     $scope.toShow = false;
     toShow.removeClass('realyShowing');
   };

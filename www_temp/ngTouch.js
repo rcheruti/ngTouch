@@ -1,3 +1,6 @@
+
+(function(window,angular){
+
 'use strict';
 
 /**
@@ -47,6 +50,7 @@ ngTouch.provider('$swipe',[
       __moveTolerance = 'moveTolerance',
       __preventDuration = 'preventDuration',
       __moveBufferRadius = 'moveBufferRadius',
+      __clickbusterThreshold = 'clickbusterThreshold',
       __preventMouseFromTouch = 'preventMouseFromTouch',
       __preventMoveFromDrag = 'preventMoveFromDrag',
       __element = 'element',
@@ -70,20 +74,25 @@ ngTouch.provider('$swipe',[
       __handleEnd = 'handleEnd',
       __handleCancel = 'handleCancel',
       __handleMove = 'handleMove',
-      __$scope = '$scope'
+      __$scope = '$scope',
+      __callApply = 'callApply',
+      __callDestroy = 'callDestroy',
+      __blurGhostClickElement = 'blurGhostClickElement',
+      __unbind = 'unbind',
+      __$swiperId = '$swiperId'
   ;
   
   var provider = this;
   provider[__tapDuration] = 750; // Shorter than 750ms is a tap, longer is a taphold or drag.
   provider[__moveTolerance] = 12; // 12px seems to work in most mobile browsers.
   provider[__preventDuration] = 2500; // 2.5 seconds maximum from preventGhostClick call to click
-  //this.clickbusterThreshold = 25; // 25 pixels in any dimension is the limit for busting clicks.
+  provider[__clickbusterThreshold] = 25; // 25 pixels in any dimension is the limit for busting clicks.
   provider[__moveBufferRadius] = 10 ; // The total distance in any direction before we make the call on swipe vs. scroll.
   provider[__preventMouseFromTouch] = true; // to prevent or not the 'mouse' events when the 'touch' events were fired
   provider[__preventMoveFromDrag] = true; // to prevent or not the 'move' event when the 'drag' event is been fired
   
   var ACTIVE_CLASS_NAME = 'ng-click-active';
-  var TAPHOLD_ACTIVE_CLASS = 'ng-taphold-active';
+  //var TAPHOLD_ACTIVE_CLASS = 'ng-taphold-active';
   
   /*
    * Events in the '$swipe':
@@ -114,20 +123,22 @@ ngTouch.provider('$swipe',[
       y: e.clientY
     };
   }
+  /*
   function checkHandlers( swiper, handlersArr ){
     var h = swiper[__eventHandlers];
     for(var i=0; i<handlersArr.length; i++) if( handlersArr[i] in h ) return true;
     return false;
   }
+  */
   function callHandler( that, name, argsArr ){
     var func = that[__eventHandlers][name];
     if( func ){
-      if( that[__$scope] ) that[__$scope].$apply(function(){ func.apply( that, argsArr ); });
+      if( that[__$scope] && that[__callApply] ) 
+        that[__$scope].$apply(function(){ func.apply( that, argsArr ); });
       else func.apply( that, argsArr );
     }
   }
   
-  /*
   //  Get the target element from the event, appling all the hacks needed
   function getElementFromEvent(event){
     event = getEvent(event);
@@ -138,31 +149,38 @@ ngTouch.provider('$swipe',[
     }
     return element ;
   }
-  */
+  
   
   /**
    * @ngdoc Class
    * @name Swiper
    * 
    * @description
-   * This is the Swiper class, used by the {@link ngTouch $swipe} module.
+   * This is the Swiper class, used by the {@link ngTouch $swipe} module to hold
+   * the configuration of the actual bind call.
+   * 
+   * Every time a 'bind call' is executed an instance of this class will be
+   * created to hold the configurations and to handle the events.
    * 
    * @param {object} config Configuration object to override the default values
    */
   function Swiper(config){
     var that = this;
-    if(!(config instanceof Object)) config = {};
     that[__element] = config[__element];
     that[__eventHandlers] = config[__eventHandlers];
     
-    that[__tapDuration] = config[__tapDuration] || provider[__tapDuration];
+    that[__tapDuration] = config[__tapDuration] || provider[__tapDuration]; 
     that[__moveTolerance] = config[__moveTolerance] || provider[__moveTolerance];
     that[__preventDuration] = config[__preventDuration] || provider[__preventDuration];
     that[__moveBufferRadius] = config[__moveBufferRadius] || provider[__moveBufferRadius] ;
     that[__preventMouseFromTouch] = config[__preventMouseFromTouch] || provider[__preventMouseFromTouch];
     that[__preventMoveFromDrag] = config[__preventMoveFromDrag] || provider[__preventMoveFromDrag];
+    that[__clickbusterThreshold] = config[__clickbusterThreshold] || provider[__clickbusterThreshold];
     
     that[__$scope] = config[__$scope] ;
+    that[__callApply] = config[__callApply] || true ;
+    that[__callDestroy] = config[__callDestroy] || true ;
+    that[__blurGhostClickElement] = config[__blurGhostClickElement] || true;
     
     
     that[__hasTouchEvents] = false; // to find if this browser has touch events (need to stay in separate var!)
@@ -239,9 +257,9 @@ ngTouch.provider('$swipe',[
     var y = e.clientY;
     var dist = Math.sqrt(Math.pow(x - that[__touchStartX], 2) + Math.pow(y - that[__touchStartY], 2));
     var coords = getCoordinates(e);
-
+    
       // check if this is a tap:
-    if (that[__tapping] && diff < that[__tapDuration] && dist < that[__moveTolerance]){
+    if ( that[__tapping] && diff < that[__tapDuration] && dist < that[__moveTolerance]){
       callHandler( that, 'tap', [ coords, eventFired ] );
     }
     
@@ -253,6 +271,9 @@ ngTouch.provider('$swipe',[
     that[__lastCancelEvent] = eventFired;
     callHandler( that, 'cancel', [ eventFired ] );
     that[__resetState]();
+  };
+  proto[__unbind] = function(){
+    
   };
   
   
@@ -276,19 +297,33 @@ ngTouch.provider('$swipe',[
      * which is to be watched for swipes, and an object with four handler functions. See the
      * documentation for `bind` below.
      */
-  this.$get = ['$rootElement','$timeout',function($rootElement,$timeout){ 
+  provider.$get = ['$rootElement','$timeout',function($rootElement,$timeout){ 
+    
+    function _generalHandle(event){
+      console.log('general handler', event);
+    }
+    function _generalMouseHandle(event){
+      console.log('general mouse', event);
+    }
+    function _generalTouchHandle(event){
+      console.log('general touch', event);
+    }
+    
     
     // the below line is a piece of code from modernizr:
     // https://github.com/Modernizr/Modernizr/blob/master/feature-detects/touchevents.js
     var _hasTouch = !!(('ontouchstart' in window) || window.DocumentTouch && document instanceof DocumentTouch);
-    console.log( '_hasTouch', _hasTouch );
     
-    // first, last setup the 'ghostclick' handler on the '$rootElement' on bubbling fase:
+    
+    // first, last setup the 'ghostclick' handler on the '$rootElement' on propagation fase:
     var _swipers = [],
         _swiperEventsProps = [ __lastStartEvent, __lastMoveEvent, __lastEndEvent, __lastCancelEvent ],
-        $rootElementEl = $rootElement[0];
+        $rootElementEl = $rootElement[0],
+        _lastLabelClickCoords = null;
     
+    $rootElementEl.addEventListener('mouseup', _generalHandle, false); // general handle on bubbling fase
     if( _hasTouch ){
+      $rootElementEl.addEventListener('touchend', _generalHandle, false); // general handle on bubbling fase
       $rootElementEl.addEventListener('mousedown',_ghostclick,true); // can be thrown after a 'touchstart'
       //$rootElementEl.addEventListener('mousemove',_ghostclick,true); // can be thrown after a 'touchend' or a 'touchmove'
       $rootElementEl.addEventListener('mouseup',_ghostclick,true); // can be thrown after a 'touchend'
@@ -309,34 +344,70 @@ ngTouch.provider('$swipe',[
       $timeout( _timeoutHandler, swiper[__preventDuration] );
     }
     function _ghostclick(mouseEvent){
-      var swiper = null, _break = false, touchEvent = null;
+      var swiper = null, 
+          touchEvent = null,
+          mousePos = getCoordinates( mouseEvent );
+      // Work around desktop Webkit quirk where clicking a label will fire two clicks (on the label
+      // and on the input element). Depending on the exact browser, this second click we don't want
+      // to bust has either (0,0), negative coordinates, or coordinates equal to triggering label
+      // click event
+      if( ( mousePos.x < 1 && mousePos.y < 1 ) || // check: offscreen
+          ( // check: input click triggered by label click
+            _lastLabelClickCoords &&
+            _lastLabelClickCoords[0] === mousePos.x &&
+            _lastLabelClickCoords[1] === mousePos.y
+          ) ){
+        return; // let the second event fire
+      }
+      // remember label click coordinates to prevent click busting of trigger click event on input
+      // or reset label click coordinates on first subsequent click
+      _lastLabelClickCoords = (nodeName_(event.target) === 'label')? 
+          [mousePos.x, mousePos.y] : null ;
+      
+      outer:
       for(var i=0; i<_swipers.length; i++){
         swiper = _swipers[i];
         for(var y=0; y<_swiperEventsProps.length; y++){
           if( !(touchEvent = swiper[_swiperEventsProps[y]]) )continue;
-          var mousePos = getCoordinates( mouseEvent );
           var touchPos = getCoordinates( touchEvent );
-          if( touchPos.x === mousePos.x && touchPos.y === mousePos.y ){
+          
+          // the position of the mouse event dispatched can be a little off the
+          // position of the touch event, so some calcs are needed
+          if( Math.abs(touchPos.x - mousePos.x) < swiper[__clickbusterThreshold] 
+              && Math.abs(touchPos.y - mousePos.y) < swiper[__clickbusterThreshold] ){
               // is ghost click!
             mouseEvent.preventDefault();
             mouseEvent.stopPropagation();
-            _break = true;
-            break;
+              // blur the element
+            if( swiper[__blurGhostClickElement] ){
+              var el = getElementFromEvent( mouseEvent );
+              if( el.blur ) el.blur();
+            }
+            break outer;
           }
         }
-        if( _break ) break;
       }
     }
     
     /* */
     
+    var scopedSwipers = {},
+      __SwiperStaticId = 1;
     // now, our service handlers:
     function onFunc(element, eventHandlers, config) {
         if(!(config instanceof Object)) config = {};
-        config[__element] = element;
+        var scope = config.$scope;
+          // check the registry
+        if( element[__$swiperId] ){
+          var swipe = scopedSwipers[element[__$swiperId]];
+          swipe[__eventHandlers] = angular.extend( swipe[__eventHandlers], eventHandlers );
+          return swipe; // just have an entry in registry, so don't need to proccess
+        }
+        config[__element] = angular.element( element );
         config[__eventHandlers] = eventHandlers;
         var swiper = new Swiper(config);
         
+        /*
         // ===  Touch events  ===
         if( checkHandlers( swiper, ['start','tap','drag'] ) )  element.on('touchstart', _touchstart );
         if( checkHandlers( swiper, ['drag'] ) )                element.on('touchmove', _touchmove );
@@ -346,12 +417,42 @@ ngTouch.provider('$swipe',[
         if( checkHandlers( swiper, ['start','tap','drag'] ) )  element.on('mousedown', _mousedown );
         if( checkHandlers( swiper, ['move','drag'] ) )         element.on('mousemove', _mousemove );
         if( checkHandlers( swiper, ['end','tap','drag'] ) )    element.on('mouseup', _mouseup );
+        */
         
-        if( swiper[__$scope] ){
-          swiper[__$scope].$on('$destroy', function(){
-            offFunc();
-          });
+        element.on('touchstart', _touchstart );
+        element.on('touchmove', _touchmove );
+        element.on('touchend', _touchend );
+        element.on('touchcancel', _touchcancel );
+        
+        element.on('mousedown', _mousedown );
+        element.on('mousemove', _mousemove );
+        element.on('mouseup', _mouseup );
+        
+        // set handler for unbind
+        swiper[__unbind] = function(){
+          element.off('touchstart', _touchstart );
+          element.off('touchmove', _touchmove );
+          element.off('touchend', _touchend );
+          element.off('touchcancel', _touchcancel );
+
+          element.off('mousedown', _mousedown );
+          element.off('mousemove', _mousemove );
+          element.off('mouseup', _mouseup );
+          
+          if( element[__$swiperId] ){
+            //scopedSwipers[element[__$swiperId]] = null;
+            delete scopedSwipers[element[__$swiperId]]; // the 'ids' will never be reused!
+          }
+          element = null;
+          swiper = null;
+        };
+        
+        if( scope && swiper[__callDestroy] ){
+          element[__$swiperId] = __SwiperStaticId++;
+          scopedSwipers[element[__$swiperId]] = swiper;
+          scope.$on('$destroy', swiper[__unbind] ); // set 'swiper.unbind' on '$scope#$on($destroy)'
         }
+        
         return swiper ;
         
         // =========  Handlers  =========
@@ -387,7 +488,6 @@ ngTouch.provider('$swipe',[
         
       }
     
-    function offFunc(){  }
     
     return {
       /**
@@ -424,27 +524,6 @@ ngTouch.provider('$swipe',[
        *
        */
       bind: onFunc ,
-      
-      /**
-       * @ngdoc method
-       * @name $swipe#on
-       * 
-       * @description 
-       * This is just an alias for de {@link ngTouch `bind`} method.
-       * 
-       */
-      on: onFunc ,
-      
-      /**
-       * @ngdoc method
-       * @name $swipe#off
-       * 
-       * @description 
-       * This is an unbind method.
-       * Implementation is pendding!
-       * 
-       */
-      off: offFunc 
       
     };
   }];
@@ -501,24 +580,34 @@ ngTouch.config(['$provide', function($provide) {
   }]);
 }]);
 
-ngTouch.directive('ngClick', ['$parse', '$swipe',
-    function($parse, $swipe) {
-  
-  
-  // Actual linking function.
-  return function(scope, element, attr) {
-    
-    var clickHandler = $parse(attr.ngClick);
-    $swipe.bind(element, {
-      tap: function(pos, event){
-        scope.$apply(function() {
-          clickHandler(scope, {$event: event});
-        });
-      }
-    });
-    
-  };
-}]);
+createDirectives('ngClick', 'tap');
+createDirectives('ngTap', 'tap');
+createDirectives('ngTouchStart', 'start');
+createDirectives('ngTouchDrag', 'drag');
+createDirectives('ngTouchMove', 'move');
+createDirectives('ngTouchEnd', 'end');
+createDirectives('ngTouchCancel', 'cancel');
+//createDirectives(['ngTapHold'], 'taphold');
+//createDirectives(['ngDrag'], 'drag');
+function createDirectives( dirName, swipeEvent ){
+  ngTouch.directive(dirName, ['$parse', '$swipe',
+      function($parse, $swipe) {
+
+    // Actual linking function.
+    return function(scope, element, attr) {
+
+      var handler = $parse(attr[dirName]),
+          objEv = {};
+      objEv[swipeEvent] = function(pos, event){
+        handler(scope, {$event: event || pos});
+      };
+      $swipe.bind(element, objEv, {$scope: scope});
+
+    };
+  }]);
+}
+
+
 
 
 'use strict';
@@ -626,11 +715,7 @@ function makeSwipeDirective(directiveName, direction, eventName) {
             deltaX > MIN_HORIZONTAL_DISTANCE &&
             deltaY / deltaX < MAX_VERTICAL_RATIO;
       }
-
-      var pointerTypes = ['touch'];
-      if (!angular.isDefined(attr['ngSwipeDisableMouse'])) {
-        pointerTypes.push('mouse');
-      }
+      
       $swipe.bind(element, {
         'start': function(coords, event) {
           startCoords = coords;
@@ -647,7 +732,7 @@ function makeSwipeDirective(directiveName, direction, eventName) {
             });
           }
         }
-      }, pointerTypes);
+      } );
     };
   }]);
 }
@@ -656,3 +741,6 @@ function makeSwipeDirective(directiveName, direction, eventName) {
 makeSwipeDirective('ngSwipeLeft', -1, 'swipeleft');
 makeSwipeDirective('ngSwipeRight', 1, 'swiperight');
 
+
+
+})(window,window.angular);

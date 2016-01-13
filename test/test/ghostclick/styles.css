@@ -1,22 +1,23 @@
 
 .GhostClick{
-    position: relative;
-    height: 100%;
+    
+}
+.GhostClick .description{
+    width: 67%;
 }
 .GhostClick input{
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    padding: 4px 8px;
-    
-    width: 30%;
-    display: inline-block;
+    width: 50%;
 }
 
 .GhostClick .panel{
     position: absolute;
     right:0;
+    top:0;
     width:30%;
-    height: 20%;
+    height: 15%;
+}
+.GhostClick .panel.pane2{
+    top:16%;
 }
 .GhostClick .panel > *{
     border-left: 1px solid red;

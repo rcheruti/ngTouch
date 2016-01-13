@@ -48,14 +48,18 @@ ngTouch.config(['$provide', function($provide) {
   }]);
 }]);
 
-createDirectives(['ngClick','ngTap'], 'tap');
+createDirectives('ngClick', 'tap');
+createDirectives('ngTap', 'tap');
+createDirectives('ngTouchStart', 'start');
+createDirectives('ngTouchDrag', 'drag');
+createDirectives('ngTouchMove', 'move');
+createDirectives('ngTouchEnd', 'end');
+createDirectives('ngTouchCancel', 'cancel');
 //createDirectives(['ngTapHold'], 'taphold');
 //createDirectives(['ngDrag'], 'drag');
-function createDirectives( dirNameArr, swipeEvent ){
-  for( var i=0, dirName = dirNameArr[i]; i < dirNameArr.length; i++ )
+function createDirectives( dirName, swipeEvent ){
   ngTouch.directive(dirName, ['$parse', '$swipe',
       function($parse, $swipe) {
-
 
     // Actual linking function.
     return function(scope, element, attr) {
@@ -63,8 +67,8 @@ function createDirectives( dirNameArr, swipeEvent ){
       var handler = $parse(attr[dirName]),
           objEv = {};
       objEv[swipeEvent] = function(pos, event){
-        handler(scope, {$event: event});
-      }
+        handler(scope, {$event: event || pos});
+      };
       $swipe.bind(element, objEv, {$scope: scope});
 
     };

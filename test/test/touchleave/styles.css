@@ -1,0 +1,18 @@
+
+.TouchLeave{
+    
+}
+
+.TouchLeave .panel1{
+    display: inline-block;
+    width: 90%;
+    margin: .2em;
+    border: 1px solid darkorange;
+    background: lightsalmon;
+    padding: .5em;
+}
+
+.TouchLeave .panel1.ng-click-active{
+    opacity: .4;
+}
+

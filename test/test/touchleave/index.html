@@ -1,0 +1,30 @@
+
+<div ng-controller="TouchLeave" class="TouchLeave">
+    
+    <div class="description">
+        This is to test if some kind of "touch leave" will be done properly.
+        <br/>
+        <br/>
+        If we cause a '$swipe->start' but not a '$swipe->end' some classes will stay 
+        in the element, and styles will stay applied.
+    </div>
+    
+    <div>
+        <button ng-click=""
+                ng-touch-start="log($event)"
+                ng-touch-end="log($event)"
+                ng-touch-drag="log($event)"
+                ng-touch-cancel="log($event)"
+                >Click me to test</button>
+    </div>
+    
+    <div>
+        <span  ng-click="" class="panel1" 
+                ng-touch-start="log($event)"
+                ng-touch-end="log($event)"
+                ng-touch-drag="log($event)"
+                ng-touch-cancel="log($event)"
+              >Click here to test</span>
+    </div>
+    
+</div>

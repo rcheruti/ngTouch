@@ -4,6 +4,7 @@
     border:none; 
     box-sizing: border-box;
     text-decoration: none;
+    outline: none;
 }
 html,body{
     width:100%;
@@ -48,6 +49,7 @@ html,body{
     width: 70%;
 }
 .conteudo > *{
+    position:relative;
     height:100%;
 }
 
@@ -57,6 +59,33 @@ html,body{
     width: 100%;
     text-align: left;
 }
+.clickstart{
+    border-color: darkgreen;
+    box-shadow: 0px 0px 3px darkgreen inset;
+}
+.clickend{
+    
+}
+input{
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 4px 8px;
+    display: inline-block;
+}
+button{
+    border: 1px solid #ccc;
+    padding: 0.5em;
+    border-radius: 4px;
+    margin: .2em .1em;
+    background: #eee;
+    box-shadow: 0px 2px 2px #bbb, 0px 2px 2px #fff inset;
+}
+/* button:active,  */
+button.ng-click-active{
+    box-shadow: 0px 1px 2px #bbb inset, 0px -3px 3px #fff inset;
+}
+
+
 
 .Clicks{  }
 .Clicks .panel{ 
@@ -76,23 +105,24 @@ html,body{
 
 
 .GhostClick{
-    position: relative;
-    height: 100%;
+    
+}
+.GhostClick .description{
+    width: 67%;
 }
 .GhostClick input{
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    padding: 4px 8px;
-    
-    width: 30%;
-    display: inline-block;
+    width: 50%;
 }
 
 .GhostClick .panel{
     position: absolute;
     right:0;
+    top:0;
     width:30%;
-    height: 20%;
+    height: 15%;
+}
+.GhostClick .panel.pane2{
+    top:16%;
 }
 .GhostClick .panel > *{
     border-left: 1px solid red;
@@ -109,6 +139,10 @@ html,body{
 .GhostClick .panel > *.getout{
     -webkit-transform: translate3d(100%,0,0);
     transform: translate3d(100%,0,0);
+}
+
+.SwiperLot{
+    
 }
 
 .TapHold{
@@ -141,3 +175,22 @@ html,body{
 .TapHold .toShow.showing, .TapHold .toShow.realyShowing{
     opacity: 1;
 }
+
+
+.TouchLeave{
+    
+}
+
+.TouchLeave .panel1{
+    display: inline-block;
+    width: 90%;
+    margin: .2em;
+    border: 1px solid darkorange;
+    background: lightsalmon;
+    padding: .5em;
+}
+
+.TouchLeave .panel1.ng-click-active{
+    opacity: .4;
+}
+

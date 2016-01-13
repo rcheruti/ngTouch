@@ -13,6 +13,10 @@ Module.config(['$stateProvider','$urlRouterProvider',
       url: '/ghostclick', views:{ conteudo:{ templateUrl: 'test/ghostclick/index.html' } }
     }).state('taphold',{
       url: '/taphold', views:{ conteudo:{ templateUrl: 'test/taphold/index.html' } }
+    }).state('swiperlot',{
+      url: '/swiperlot', views:{ conteudo:{ templateUrl: 'test/swiperlot/index.html' } }
+    }).state('touchleave',{
+      url: '/touchleave', views:{ conteudo:{ templateUrl: 'test/touchleave/index.html' } }
     });
     
     
