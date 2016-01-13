@@ -103,11 +103,7 @@ function makeSwipeDirective(directiveName, direction, eventName) {
             deltaX > MIN_HORIZONTAL_DISTANCE &&
             deltaY / deltaX < MAX_VERTICAL_RATIO;
       }
-
-      var pointerTypes = ['touch'];
-      if (!angular.isDefined(attr['ngSwipeDisableMouse'])) {
-        pointerTypes.push('mouse');
-      }
+      
       $swipe.bind(element, {
         'start': function(coords, event) {
           startCoords = coords;
@@ -124,7 +120,7 @@ function makeSwipeDirective(directiveName, direction, eventName) {
             });
           }
         }
-      }, pointerTypes);
+      } );
     };
   }]);
 }

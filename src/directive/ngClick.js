@@ -48,22 +48,28 @@ ngTouch.config(['$provide', function($provide) {
   }]);
 }]);
 
-ngTouch.directive('ngClick', ['$parse', '$swipe',
-    function($parse, $swipe) {
-  
-  
-  // Actual linking function.
-  return function(scope, element, attr) {
-    
-    var clickHandler = $parse(attr.ngClick);
-    $swipe.bind(element, {
-      tap: function(pos, event){
-        scope.$apply(function() {
-          clickHandler(scope, {$event: event});
-        });
+createDirectives(['ngClick','ngTap'], 'tap');
+//createDirectives(['ngTapHold'], 'taphold');
+//createDirectives(['ngDrag'], 'drag');
+function createDirectives( dirNameArr, swipeEvent ){
+  for( var i=0, dirName = dirNameArr[i]; i < dirNameArr.length; i++ )
+  ngTouch.directive(dirName, ['$parse', '$swipe',
+      function($parse, $swipe) {
+
+
+    // Actual linking function.
+    return function(scope, element, attr) {
+
+      var handler = $parse(attr[dirName]),
+          objEv = {};
+      objEv[swipeEvent] = function(pos, event){
+        handler(scope, {$event: event});
       }
-    });
-    
-  };
-}]);
+      $swipe.bind(element, objEv, {$scope: scope});
+
+    };
+  }]);
+}
+
+
 

@@ -11,6 +11,8 @@ Module.config(['$stateProvider','$urlRouterProvider',
       url: '/clicks', views:{ conteudo:{ templateUrl: 'test/clicks/index.html' } }
     }).state('ghostclick',{
       url: '/ghostclick', views:{ conteudo:{ templateUrl: 'test/ghostclick/index.html' } }
+    }).state('taphold',{
+      url: '/taphold', views:{ conteudo:{ templateUrl: 'test/taphold/index.html' } }
     });
     
     

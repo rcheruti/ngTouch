@@ -1,0 +1,31 @@
+
+.TapHold{
+    position: relative;
+    height: 100%;
+}
+
+.TapHold .toHold{
+    width: 100%;
+    padding: 1em 0.5em;
+    border: 2px dashed #ccc;
+    border-radius: 6px;
+    margin: 0 0.5em;
+}
+
+.TapHold .toShow{
+    position: absolute;
+    bottom: 4%;
+    right: 4%;
+    padding: 0.5em ;
+    background: darkred;
+    color: #fff;
+    font-weight: bold;
+    font-size: 1.3em;
+    opacity: 0;
+    
+    -webkit-transition: opacity 0.2s ease-out;
+    transition: opacity 0.2s ease-out;
+}
+.TapHold .toShow.showing, .TapHold .toShow.realyShowing{
+    opacity: 1;
+}
