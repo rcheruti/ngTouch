@@ -1,5 +1,17 @@
 'use strict';
 
+// requestAnimationFrame hack, where I place it?!
+window.requestAnimationFrame = (function(){
+  return  window.requestAnimationFrame       ||
+    window.webkitRequestAnimationFrame ||
+    window.mozRequestAnimationFrame    ||
+    window.oRequestAnimationFrame      ||
+    window.msRequestAnimationFrame     ||
+    function( callback, element ){  // ( function, DOMElement )
+      window.setTimeout(callback, 1000 / 60);
+    };
+})();
+
 /* global ngTouch: false */
 
 /**
@@ -72,7 +84,8 @@
  */
 
 function makeSwipeDirective(directiveName, direction, eventName) {
-  ngTouch.directive(directiveName, ['$parse', '$swipe', function($parse, $swipe) {
+  ngTouch.directive(directiveName, ['$parse', '$swipe', '$animateCss', '$window',
+      function($parse, $swipe, $animateCss, $window) {
     // The maximum vertical delta for a swipe should be less than 75px.
     var MAX_VERTICAL_DISTANCE = 75;
     // Vertical distance should not be more than a fraction of the horizontal distance.
@@ -80,10 +93,14 @@ function makeSwipeDirective(directiveName, direction, eventName) {
     // At least a 30px lateral motion is necessary for a swipe.
     var MIN_HORIZONTAL_DISTANCE = 30;
 
-    return function(scope, element, attr) {
-      var swipeHandler = $parse(attr[directiveName]);
-
-      var startCoords, valid;
+    return function(scope, element, attr){
+      var swipeHandler = $parse(attr[directiveName]),
+          drag = attr['ngSwipeDrag']? $parse(attr['ngSwipeDrag'])() : true,
+          endClass = attr['ngSwipeEndclass']? 
+                      $parse(attr['ngSwipeEndclass'])() || attr['ngSwipeEndclass']
+                      : '';
+        
+      var startCoords, actualCoords, valid, animator, dragging;
 
       function validSwipe(coords) {
         // Check that it's within the coordinates.
@@ -103,24 +120,90 @@ function makeSwipeDirective(directiveName, direction, eventName) {
             deltaX > MIN_HORIZONTAL_DISTANCE &&
             deltaY / deltaX < MAX_VERTICAL_RATIO;
       }
+      function validMoveArea(coords){
+        if (!startCoords) return false;
+        var deltaY = Math.abs(coords.y - startCoords.y);
+        var deltaX = (coords.x - startCoords.x) * direction;
+        return deltaY < MAX_VERTICAL_DISTANCE &&
+            deltaX > 0 &&
+            deltaY / deltaX < MAX_VERTICAL_RATIO;
+      }
+      function setTransition( ahead ){
+        var x = (actualCoords.x - startCoords.x);
+        if( ahead ){
+          $window.requestAnimationFrame(function(){
+            element.css({
+              '-webkit-transform': 'translate3d('+x+'px,0,0)',
+              'transform': 'translate3d('+x+'px,0,0)',
+            });
+          });
+        }else{
+          animator = $animateCss( element, {
+            transitionStyle: 'transform 0.2s ease-out',
+            //from: { 'transform': 'translate3d('+x+'px,0,0)' },
+            to: { 'transform': 'translate3d(0px,0,0)' }
+          });
+          animator.start().then(function(){
+            element.css({
+              '-webkit-transform': '',
+              'transform': '',
+            });
+          });
+        }
+      }
       
-      $swipe.bind(element, {
+      var bindHandlers = {
         'start': function(coords, event) {
-          startCoords = coords;
-          valid = true;
+          actualCoords = startCoords = coords;
+          if( animator ) animator.end();
+          setTransition(true);
+          dragging = valid = true;
         },
         'cancel': function(event) {
-          valid = false;
+          dragging = valid = false;
+          actualCoords = startCoords;
+          setTransition(false);
         },
         'end': function(coords, event) {
-          if (validSwipe(coords)) {
-            scope.$apply(function() {
+          if (validSwipe(coords)){
+            element.css({
+              '-webkit-transform': '',
+              'transform': '',
+            });
+            scope.$apply(function(){
+              if( endClass ) element.addClass(endClass);
               element.triggerHandler(eventName);
               swipeHandler(scope, {$event: event});
             });
+          }else{
+            //var fromX = (coords.x - startCoords.x);
+            //if( fromX * direction < 0 ) return;
+            /*
+            animator = $animateCss( element, {
+              transitionStyle: 'transform 0.2s ease-out',
+              from: { 'transform': 'translate3d('+fromX+'px,0,0)' },
+              to: { 'transform': 'translate3d(0px,0,0)' }
+            });
+            animator.start();
+            */
+            setTransition(false);
           }
+          dragging = false;
+        },
+        drag: function(coords, event){
+          return; //  <<---------
+          if( !drag ) return;
+          if( !validMoveArea(coords) ){
+            actualCoords = startCoords;
+            setTransition(false);
+            return;
+          }
+          actualCoords = coords;
+          setTransition(true);
         }
-      } );
+      };
+      
+      $swipe.bind(element, bindHandlers );
     };
   }]);
 }

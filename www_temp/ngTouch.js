@@ -52,7 +52,7 @@ ngTouch.provider('$swipe',[
       __moveBufferRadius = 'moveBufferRadius',
       __clickbusterThreshold = 'clickbusterThreshold',
       __preventMouseFromTouch = 'preventMouseFromTouch',
-      __preventMoveFromDrag = 'preventMoveFromDrag',
+      //__preventMoveFromDrag = 'preventMoveFromDrag',
       __element = 'element',
       __eventHandlers = 'eventHandlers',
       __hasTouchEvents = 'hasTouchEvents',
@@ -74,12 +74,15 @@ ngTouch.provider('$swipe',[
       __handleEnd = 'handleEnd',
       __handleCancel = 'handleCancel',
       __handleMove = 'handleMove',
+      __handleDrag = 'handleDrag',
       __$scope = '$scope',
       __callApply = 'callApply',
       __callDestroy = 'callDestroy',
       __blurGhostClickElement = 'blurGhostClickElement',
       __unbind = 'unbind',
-      __$swiperId = '$swiperId'
+      __$swiperId = '$swiperId',
+      __addEventListener = 'addEventListener',
+      __$id = '$id'
   ;
   
   var provider = this;
@@ -89,7 +92,7 @@ ngTouch.provider('$swipe',[
   provider[__clickbusterThreshold] = 25; // 25 pixels in any dimension is the limit for busting clicks.
   provider[__moveBufferRadius] = 10 ; // The total distance in any direction before we make the call on swipe vs. scroll.
   provider[__preventMouseFromTouch] = true; // to prevent or not the 'mouse' events when the 'touch' events were fired
-  provider[__preventMoveFromDrag] = true; // to prevent or not the 'move' event when the 'drag' event is been fired
+  //provider[__preventMoveFromDrag] = true; // to prevent or not the 'move' event when the 'drag' event is been fired
   
   var ACTIVE_CLASS_NAME = 'ng-click-active';
   //var TAPHOLD_ACTIVE_CLASS = 'ng-taphold-active';
@@ -151,6 +154,12 @@ ngTouch.provider('$swipe',[
   }
   
   
+  var generalDragging = [],
+      generalTapping = []
+    //  _SwiperStaticId = 1
+    ;
+  //console.log( 'Swiper generalDragging map', generalDragging );
+  //console.log( 'Swiper generalTapping map', generalTapping );
   /**
    * @ngdoc Class
    * @name Swiper
@@ -166,6 +175,7 @@ ngTouch.provider('$swipe',[
    */
   function Swiper(config){
     var that = this;
+    //that[__$id] = _SwiperStaticId++;
     that[__element] = config[__element];
     that[__eventHandlers] = config[__eventHandlers];
     
@@ -174,7 +184,7 @@ ngTouch.provider('$swipe',[
     that[__preventDuration] = config[__preventDuration] || provider[__preventDuration];
     that[__moveBufferRadius] = config[__moveBufferRadius] || provider[__moveBufferRadius] ;
     that[__preventMouseFromTouch] = config[__preventMouseFromTouch] || provider[__preventMouseFromTouch];
-    that[__preventMoveFromDrag] = config[__preventMoveFromDrag] || provider[__preventMoveFromDrag];
+    //that[__preventMoveFromDrag] = config[__preventMoveFromDrag] || provider[__preventMoveFromDrag];
     that[__clickbusterThreshold] = config[__clickbusterThreshold] || provider[__clickbusterThreshold];
     
     that[__$scope] = config[__$scope] ;
@@ -197,70 +207,101 @@ ngTouch.provider('$swipe',[
     that[__totalX] = 0;            // Absolute total movement, used to control swipe vs. scroll.
     that[__totalY] = 0;            // Absolute total movement, used to control swipe vs. scroll.
     that[__startCoords] = null;    // Coordinates of the start position.
-    that[__lastPos] = null;        // Last event's position.
+    //that[__lastPos] = null;        // Last event's position.
   }
   var proto = Swiper.prototype;
   proto[__resetState] = function(){
-    this[__tapping] = false;
-    this[__dragging] = false;
-    this[__element].removeClass(ACTIVE_CLASS_NAME);
+    var that = this;
+    that[__tapping] = false;
+    that[__dragging] = false;
+    that[__element].removeClass(ACTIVE_CLASS_NAME);
   };
   proto[__handleStart] = function(eventFired){
-    var that = this;
+    var that = this ;
+    
     that[__lastStartEvent] = eventFired;
-    that[__tapping] = true;
-    that[__element].addClass(ACTIVE_CLASS_NAME);
-    that[__startTime] = Date.now();
-    var e = getEvent(eventFired);
-    that[__touchStartX] = e.clientX;
-    that[__touchStartY] = e.clientY;
-
-    that[__dragging] = true;
-    that[__totalX] = 0;
-    that[__totalY] = 0;
-    that[__lastPos] = that[__startCoords] = getCoordinates(e);
+    
+      // TAP proccess
+    if( that[__eventHandlers]['tap'] ){
+      that[__element].addClass(ACTIVE_CLASS_NAME); // only put the class if tapping or dragging
+      that[__startTime] = Date.now();
+      var e = getEvent(eventFired);
+      that[__touchStartX] = e.clientX;
+      that[__touchStartY] = e.clientY;
+      that[__tapping] = true;
+      generalTapping.push( that );
+    }
+    
+      // DRAG proccess
+    if( that[__eventHandlers]['drag'] ){
+      that[__element].addClass(ACTIVE_CLASS_NAME); // only put the class if tapping or dragging
+      that[__dragging] = true;
+      generalDragging.push( that );
+      that[__totalX] = 0;
+      that[__totalY] = 0;
+    }
+    
+    //that[__lastPos] = 
+    that[__startCoords] = getCoordinates(eventFired);
     callHandler( that, 'start', [ that[__startCoords], eventFired ] );
+  };
+  proto[__handleDrag] = function(eventFired){
+    var that = this;
+    var coords = getCoordinates(eventFired);
+    //that[__totalX] += Math.abs(coords.x - that[__lastPos].x);
+    //that[__totalY] += Math.abs(coords.y - that[__lastPos].y);
+    //that[__lastPos] = coords;
+    /* 
+    if (that[__totalX] < that[__moveBufferRadius] && that[__totalY] < that[__moveBufferRadius]) {
+      return;
+    }
+    */
+    // One of totalX or totalY has exceeded the buffer, so decide on swipe vs. scroll.
+    //if (that[__totalY] > that[__totalX]) {
+      // Allow native scrolling to take over.
+    //  that[__handleCancel](eventFired);
+    //} else {
+      // Prevent the browser from scrolling.
+      eventFired.preventDefault();
+      callHandler( that, 'drag', [ coords, eventFired ] );
+    //}
   };
   proto[__handleMove] = function(eventFired){
     var that = this;
     var coords = getCoordinates(eventFired);
-    if( that[__dragging] ){
-      that[__totalX] += Math.abs(coords.x - that[__lastPos].x);
-      that[__totalY] += Math.abs(coords.y - that[__lastPos].y);
-      that[__lastPos] = coords;
-      if (that[__totalX] < that[__moveBufferRadius] && that[__totalY] < that[__moveBufferRadius]) {
-        return;
-      }
-      // One of totalX or totalY has exceeded the buffer, so decide on swipe vs. scroll.
-      if (that[__totalY] > that[__totalX]) {
-        // Allow native scrolling to take over.
-        that[__handleCancel](eventFired);
-      } else {
-        // Prevent the browser from scrolling.
-        eventFired.preventDefault();
-        callHandler( that, 'drag', [ coords, eventFired ] );
-      }
-    }
-
-      // prevent the move if the drag was fired?
-    if( !(that[__preventMoveFromDrag] && that[__dragging]) ){
-        callHandler( that, 'move', [ coords, eventFired ] );
-    }
-
+    callHandler( that, 'move', [ coords, eventFired ] );
   };
   proto[__handleEnd] = function(eventFired){
     var that = this;
     that[__lastEndEvent] = eventFired;
-    var diff = Date.now() - that[__startTime];
-    var e = getEvent(eventFired);
-    var x = e.clientX;
-    var y = e.clientY;
-    var dist = Math.sqrt(Math.pow(x - that[__touchStartX], 2) + Math.pow(y - that[__touchStartY], 2));
-    var coords = getCoordinates(e);
+    
+    var coords = getCoordinates(eventFired);
     
       // check if this is a tap:
-    if ( that[__tapping] && diff < that[__tapDuration] && dist < that[__moveTolerance]){
-      callHandler( that, 'tap', [ coords, eventFired ] );
+    if( that[__tapping] ){
+      var diff = Date.now() - that[__startTime];
+      var x = coords.x;
+      var y = coords.y;
+      var dist = Math.sqrt(Math.pow(x - that[__touchStartX], 2) + Math.pow(y - that[__touchStartY], 2));
+      if ( diff < that[__tapDuration] && dist < that[__moveTolerance]){
+        callHandler( that, 'tap', [ coords, eventFired ] );
+      }
+      for( var i=0; i<generalTapping.length; i++ ){
+        if( generalTapping[i] === that ){
+          generalTapping.splice( i, 1 );
+          break;
+        }
+      }
+    }
+    
+      // check dragging to remove that from the list
+    if( that[__dragging] && that[__element][0] === getElementFromEvent(eventFired) ){
+      for( var i=0; i<generalDragging.length; i++ ){
+        if( generalDragging[i] === that ){
+          generalDragging.splice( i, 1 );
+          break;
+        }
+      }
     }
     
     callHandler( that, 'end', [ coords, eventFired ] );
@@ -273,7 +314,7 @@ ngTouch.provider('$swipe',[
     that[__resetState]();
   };
   proto[__unbind] = function(){
-    
+    // default implementation
   };
   
   
@@ -299,14 +340,23 @@ ngTouch.provider('$swipe',[
      */
   provider.$get = ['$rootElement','$timeout',function($rootElement,$timeout){ 
     
-    function _generalHandle(event){
-      console.log('general handler', event);
+    function _generalEndHandle(event){
+      for(var i=0; i<generalDragging.length; i++){
+        generalDragging[i][__handleDrag](event);
+        generalDragging[i][__handleEnd](event);
+        generalDragging[i][__resetState]();
+      }
+      for(var i=0; i<generalTapping.length; i++){
+        // don't handle tap, because this was outside the element borders, just reset
+        generalTapping[i][__resetState]();
+      }
+      generalDragging = []; // remove all draggings
+      generalTapping = []; // remove all tappings
     }
-    function _generalMouseHandle(event){
-      console.log('general mouse', event);
-    }
-    function _generalTouchHandle(event){
-      console.log('general touch', event);
+    function _generalDragHandle(event){
+      for(var i=0; i<generalDragging.length; i++){
+        generalDragging[i][__handleDrag](event);
+      }
     }
     
     
@@ -321,13 +371,15 @@ ngTouch.provider('$swipe',[
         $rootElementEl = $rootElement[0],
         _lastLabelClickCoords = null;
     
-    $rootElementEl.addEventListener('mouseup', _generalHandle, false); // general handle on bubbling fase
+    $rootElementEl[__addEventListener]('mouseup', _generalEndHandle, false); // general end handle on bubbling fase
+    $rootElementEl[__addEventListener]('mousemove', _generalDragHandle, false); // general drag handle on bubbling fase
     if( _hasTouch ){
-      $rootElementEl.addEventListener('touchend', _generalHandle, false); // general handle on bubbling fase
-      $rootElementEl.addEventListener('mousedown',_ghostclick,true); // can be thrown after a 'touchstart'
-      //$rootElementEl.addEventListener('mousemove',_ghostclick,true); // can be thrown after a 'touchend' or a 'touchmove'
-      $rootElementEl.addEventListener('mouseup',_ghostclick,true); // can be thrown after a 'touchend'
-      $rootElementEl.addEventListener('click',_ghostclick,true); // can be thrown after a 'touchstart' followed by a 'touchend'
+      $rootElementEl[__addEventListener]('touchend', _generalEndHandle, false); // general handle on bubbling fase
+      $rootElementEl[__addEventListener]('touchmove', _generalDragHandle, false); // general handle on bubbling fase
+      $rootElementEl[__addEventListener]('mousedown',_ghostclick,true); // can be thrown after a 'touchstart'
+      //$rootElementEl[__addEventListener]('mousemove',_ghostclick,true); // can be thrown after a 'touchend' or a 'touchmove'
+      $rootElementEl[__addEventListener]('mouseup',_ghostclick,true); // can be thrown after a 'touchend'
+      $rootElementEl[__addEventListener]('click',_ghostclick,true); // can be thrown after a 'touchstart' followed by a 'touchend'
     }
     function setupSwiperGhostClick( swiper ){
       if( !_hasTouch ) return;
@@ -392,7 +444,7 @@ ngTouch.provider('$swipe',[
     /* */
     
     var scopedSwipers = {},
-      __SwiperStaticId = 1;
+      __ElementStaticId = 1;
     // now, our service handlers:
     function onFunc(element, eventHandlers, config) {
         if(!(config instanceof Object)) config = {};
@@ -420,7 +472,7 @@ ngTouch.provider('$swipe',[
         */
         
         element.on('touchstart', _touchstart );
-        element.on('touchmove', _touchmove );
+        //element.on('touchmove', _touchmove );
         element.on('touchend', _touchend );
         element.on('touchcancel', _touchcancel );
         
@@ -429,6 +481,7 @@ ngTouch.provider('$swipe',[
         element.on('mouseup', _mouseup );
         
         // set handler for unbind
+        //var delegateImpl = swiper[__unbind];
         swiper[__unbind] = function(){
           element.off('touchstart', _touchstart );
           element.off('touchmove', _touchmove );
@@ -445,12 +498,13 @@ ngTouch.provider('$swipe',[
           }
           element = null;
           swiper = null;
+          //delegateImpl.call( swiper ); // call default impl.
         };
         
         if( scope && swiper[__callDestroy] ){
-          element[__$swiperId] = __SwiperStaticId++;
+          element[__$swiperId] = __ElementStaticId++;
           scopedSwipers[element[__$swiperId]] = swiper;
-          scope.$on('$destroy', swiper[__unbind] ); // set 'swiper.unbind' on '$scope#$on($destroy)'
+          scope.$on('$destroy', function(){ swiper[__unbind](); } ); // set 'swiper.unbind' on '$scope#$on($destroy)'
         }
         
         return swiper ;
@@ -612,6 +666,18 @@ function createDirectives( dirName, swipeEvent ){
 
 'use strict';
 
+// requestAnimationFrame hack, where I place it?!
+window.requestAnimationFrame = (function(){
+  return  window.requestAnimationFrame       ||
+    window.webkitRequestAnimationFrame ||
+    window.mozRequestAnimationFrame    ||
+    window.oRequestAnimationFrame      ||
+    window.msRequestAnimationFrame     ||
+    function( callback, element ){  // ( function, DOMElement )
+      window.setTimeout(callback, 1000 / 60);
+    };
+})();
+
 /* global ngTouch: false */
 
 /**
@@ -684,7 +750,8 @@ function createDirectives( dirName, swipeEvent ){
  */
 
 function makeSwipeDirective(directiveName, direction, eventName) {
-  ngTouch.directive(directiveName, ['$parse', '$swipe', function($parse, $swipe) {
+  ngTouch.directive(directiveName, ['$parse', '$swipe', '$animateCss', '$window',
+      function($parse, $swipe, $animateCss, $window) {
     // The maximum vertical delta for a swipe should be less than 75px.
     var MAX_VERTICAL_DISTANCE = 75;
     // Vertical distance should not be more than a fraction of the horizontal distance.
@@ -692,10 +759,14 @@ function makeSwipeDirective(directiveName, direction, eventName) {
     // At least a 30px lateral motion is necessary for a swipe.
     var MIN_HORIZONTAL_DISTANCE = 30;
 
-    return function(scope, element, attr) {
-      var swipeHandler = $parse(attr[directiveName]);
-
-      var startCoords, valid;
+    return function(scope, element, attr){
+      var swipeHandler = $parse(attr[directiveName]),
+          drag = attr['ngSwipeDrag']? $parse(attr['ngSwipeDrag'])() : true,
+          endClass = attr['ngSwipeEndclass']? 
+                      $parse(attr['ngSwipeEndclass'])() || attr['ngSwipeEndclass']
+                      : '';
+        
+      var startCoords, actualCoords, valid, animator, dragging;
 
       function validSwipe(coords) {
         // Check that it's within the coordinates.
@@ -715,24 +786,89 @@ function makeSwipeDirective(directiveName, direction, eventName) {
             deltaX > MIN_HORIZONTAL_DISTANCE &&
             deltaY / deltaX < MAX_VERTICAL_RATIO;
       }
+      function validMoveArea(coords){
+        if (!startCoords) return false;
+        var deltaY = Math.abs(coords.y - startCoords.y);
+        var deltaX = (coords.x - startCoords.x) * direction;
+        return deltaY < MAX_VERTICAL_DISTANCE &&
+            deltaX > 0 &&
+            deltaY / deltaX < MAX_VERTICAL_RATIO;
+      }
+      function setTransition( ahead ){
+        var x = (actualCoords.x - startCoords.x);
+        if( ahead ){
+          $window.requestAnimationFrame(function(){
+            element.css({
+              '-webkit-transform': 'translate3d('+x+'px,0,0)',
+              'transform': 'translate3d('+x+'px,0,0)',
+            });
+          });
+        }else{
+          animator = $animateCss( element, {
+            transitionStyle: 'transform 0.2s ease-out',
+            //from: { 'transform': 'translate3d('+x+'px,0,0)' },
+            to: { 'transform': 'translate3d(0px,0,0)' }
+          });
+          animator.start().then(function(){
+            element.css({
+              '-webkit-transform': '',
+              'transform': '',
+            });
+          });
+        }
+      }
       
-      $swipe.bind(element, {
+      var bindHandlers = {
         'start': function(coords, event) {
-          startCoords = coords;
-          valid = true;
+          actualCoords = startCoords = coords;
+          if( animator ) animator.end();
+          setTransition(true);
+          dragging = valid = true;
         },
         'cancel': function(event) {
-          valid = false;
+          dragging = valid = false;
+          actualCoords = startCoords;
+          setTransition(false);
         },
         'end': function(coords, event) {
-          if (validSwipe(coords)) {
-            scope.$apply(function() {
+          if (validSwipe(coords)){
+            element.css({
+              '-webkit-transform': '',
+              'transform': '',
+            });
+            scope.$apply(function(){
+              if( endClass ) element.addClass(endClass);
               element.triggerHandler(eventName);
               swipeHandler(scope, {$event: event});
             });
+          }else{
+            //var fromX = (coords.x - startCoords.x);
+            //if( fromX * direction < 0 ) return;
+            /*
+            animator = $animateCss( element, {
+              transitionStyle: 'transform 0.2s ease-out',
+              from: { 'transform': 'translate3d('+fromX+'px,0,0)' },
+              to: { 'transform': 'translate3d(0px,0,0)' }
+            });
+            animator.start();
+            */
+            setTransition(false);
           }
+          dragging = false;
+        },
+        drag: function(coords, event){
+          if( !drag ) return;
+          if( !validMoveArea(coords) ){
+            actualCoords = startCoords;
+            setTransition(false);
+            return;
+          }
+          actualCoords = coords;
+          setTransition(true);
         }
-      } );
+      };
+      
+      $swipe.bind(element, bindHandlers );
     };
   }]);
 }
