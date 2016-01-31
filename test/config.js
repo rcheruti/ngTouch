@@ -19,6 +19,8 @@ Module.config(['$stateProvider','$urlRouterProvider',
       url: '/taphold', views:{ conteudo:{ templateUrl: 'test/taphold/index.html' } }
     }).state('touchleave',{
       url: '/touchleave', views:{ conteudo:{ templateUrl: 'test/touchleave/index.html' } }
+    }).state('preventdefault',{
+      url: '/preventdefault', views:{ conteudo:{ templateUrl: 'test/preventdefault/index.html' } }
     });
     
     

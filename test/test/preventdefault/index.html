@@ -1,0 +1,21 @@
+
+<div ng-controller="PreventDefault" class="PreventDefault">
+    
+    <div class="description">
+        This will test if the "ngClick" and "Tap $swipe events" let the
+        event progate to others listeners in the DOM hierarchy.
+        <br/><br/>
+        
+    </div>
+    
+    <div class="quadro quadro1" ng-click="log('click quadro1', $event)">
+        <div class="quadro quadro2" ng-click="log('click quadro2', $event)">
+            <input type="text" />
+        </div>
+    </div>
+    
+    <div class="log" ng-bind-html="logMsg">
+        
+    </div>
+    
+</div>

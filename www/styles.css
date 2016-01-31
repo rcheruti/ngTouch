@@ -152,6 +152,27 @@ button.ng-click-active{
     transform: translate3d(100%,0,0);
 }
 
+.PreventDefault{
+    
+}
+.PreventDefault .quadro{
+    border: 1px solid #999;
+    padding: 10px;
+    width: 100%;
+    min-height: 30px;
+}
+.PreventDefault .quadro1{
+    background: lightgreen;
+}
+.PreventDefault .quadro2{
+    background: orange;
+}
+.PreventDefault .log{
+    margin: 5px 0 0 0 ;
+    padding: 5px 0;
+}
+
+
 .SwiperLot{
     
 }

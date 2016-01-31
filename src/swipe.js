@@ -309,6 +309,11 @@ ngTouch.provider('$swipe',[
      */
   provider.$get = ['$rootElement','$timeout',function($rootElement,$timeout){ 
     
+    // the below line is a piece of code from modernizr:
+    // https://github.com/Modernizr/Modernizr/blob/master/feature-detects/touchevents.js
+    var _hasTouch = !!(('ontouchstart' in window) || window.DocumentTouch && document instanceof DocumentTouch);
+    
+    
     function _generalEndHandle(event){
       for(var i=0; i<generalDragging.length; i++){
         generalDragging[i][__handleDrag](event);
@@ -321,17 +326,15 @@ ngTouch.provider('$swipe',[
       }
       generalDragging = []; // remove all draggings
       generalTapping = []; // remove all tappings
+      if( _hasTouch && event.target.nodeName === 'INPUT' ){
+        event.target.focus();
+      }
     }
     function _generalDragHandle(event){
       for(var i=0; i<generalDragging.length; i++){
         generalDragging[i][__handleDrag](event);
       }
     }
-    
-    
-    // the below line is a piece of code from modernizr:
-    // https://github.com/Modernizr/Modernizr/blob/master/feature-detects/touchevents.js
-    var _hasTouch = !!(('ontouchstart' in window) || window.DocumentTouch && document instanceof DocumentTouch);
     
     
     // first, last setup the 'ghostclick' handler on the '$rootElement' on propagation fase:
@@ -400,10 +403,16 @@ ngTouch.provider('$swipe',[
             mouseEvent.preventDefault();
             mouseEvent.stopPropagation();
               // blur the element
+            /*
+            // this piece of code cause a BLUR on the element if we have a ghostclick,
+            // but this 'blur call' cause INPUT fields to not been focused on
+            // touch events. This piece need to stay commented for more tests and
+            // solutions.
             if( swiper[__blurGhostClickElement] ){
               var el = getElementFromEvent( mouseEvent );
               if( el.blur ) el.blur();
             }
+            /* */
             break outer;
           }
         }
