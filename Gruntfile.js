@@ -40,9 +40,9 @@ module.exports = function (grunt) {
                 src:[
                     p.dev+ 'prefix.txt',
                     p.dev+ 'touch.js',
-                    p.dev+ 'swipe.js',
-                    p.dev+ 'directive/**',
                     p.dev+ 'classes/**',
+                    p.dev+ 'service/**',
+                    p.dev+ 'directive/**',
                     //p.dev+ '**',
                     p.dev+ 'sufix.txt'
                 ],
