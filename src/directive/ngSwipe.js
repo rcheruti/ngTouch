@@ -1,16 +1,5 @@
 'use strict';
 
-// requestAnimationFrame hack, where I place it?!
-window.requestAnimationFrame = (function(){
-  return  window.requestAnimationFrame       ||
-    window.webkitRequestAnimationFrame ||
-    window.mozRequestAnimationFrame    ||
-    window.oRequestAnimationFrame      ||
-    window.msRequestAnimationFrame     ||
-    function( callback, element ){  // ( function, DOMElement )
-      window.setTimeout(callback, 1000 / 60);
-    };
-})();
 
 /* global ngTouch: false */
 

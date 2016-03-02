@@ -29,6 +29,24 @@ function nodeName_(element) {
   return angular.lowercase(element.nodeName || (element[0] && element[0].nodeName));
 }
 
+
+
+
+
+
+window.requestAnimationFrame = (function(){
+  return  window.requestAnimationFrame       ||
+    window.webkitRequestAnimationFrame ||
+    window.mozRequestAnimationFrame    ||
+    window.oRequestAnimationFrame      ||
+    window.msRequestAnimationFrame     ||
+    function( callback ){  // ( function, DOMElement )
+      window.setTimeout(callback, 1000 / 60);
+    };
+})();
+
+
+
 'use strict';
 
 /* global ngTouch: false */
@@ -675,17 +693,6 @@ function createDirectives( dirName, swipeEvent ){
 
 'use strict';
 
-// requestAnimationFrame hack, where I place it?!
-window.requestAnimationFrame = (function(){
-  return  window.requestAnimationFrame       ||
-    window.webkitRequestAnimationFrame ||
-    window.mozRequestAnimationFrame    ||
-    window.oRequestAnimationFrame      ||
-    window.msRequestAnimationFrame     ||
-    function( callback, element ){  // ( function, DOMElement )
-      window.setTimeout(callback, 1000 / 60);
-    };
-})();
 
 /* global ngTouch: false */
 
@@ -886,7 +893,6 @@ function makeSwipeDirective(directiveName, direction, eventName) {
 // Left is negative X-coordinate, right is positive.
 makeSwipeDirective('ngSwipeLeft', -1, 'swipeleft');
 makeSwipeDirective('ngSwipeRight', 1, 'swiperight');
-
 
 
 
