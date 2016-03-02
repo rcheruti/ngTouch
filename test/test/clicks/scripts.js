@@ -7,14 +7,14 @@ Module.controller('Clicks',['$scope','$element','$swipe',
     };
 
         // for '$swipe' test
-    var el = $element.find('div').eq(1);
-    $swipe.bind( el, {
+    var elX = $element.find('div').eq(1);
+    $swipe.bind( elX, {
       tap: function(pos, ev){
           console.log('$swipe tap:', pos, ev);
       },
       start: function(pos, ev){
           console.log('$swipe start:', pos, ev);
-          el.addClass('clickstart');
+          elX.addClass('clickstart');
       },
       move: function(pos, ev){
           console.log('$swipe move:', pos, ev);
@@ -24,7 +24,7 @@ Module.controller('Clicks',['$scope','$element','$swipe',
       },
       end: function(pos, ev){
           console.log('$swipe end:', pos, ev);
-          el.removeClass('clickstart');
+          elX.removeClass('clickstart');
       },
       cancel: function(pos, ev){
           console.log('$swipe cancel:', pos, ev);

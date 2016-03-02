@@ -1,27 +1,5 @@
 
-var ACTIVE_CLASS_NAME = 'ng-click-active',
-    generalDragging = [],
-    generalTapping = []; // Class to use when element pressed (touchstart/mousedown)
-
 //================  Funções auxiliares  ==========================
-function getPointerEvent( event ){
-  event = event.originalEvent || event;  // get jQuery 'originalEvent'
-  event = (event.changedTouches && event.changedTouches.length) ? event.changedTouches
-    : (event.touches && event.touches.length ? event.touches : [event]);
-  event = event[0]; //  <<---  Transformar em lista de toques/cliques!!! 
-  
-  var element = event.target || event.srcElement ; // IE uses srcElement.
-  // Hack for Safari, which can target text nodes instead of containers.
-  if (element.nodeType === 3) element = element.parentNode;
-  
-  var obj = {
-    event: event,
-    element: element,
-    x: event.clientX,
-    y: event.clientY
-  };
-  return obj;
-}
 function callHandler( that, name, argsArr ){
   var func = that.eventHandlers[name];
   if( func ){
@@ -79,7 +57,7 @@ proto.handleDrag = function(eventFired){
 proto.handleStart = function(eventFired){
   var ev = getPointerEvent(eventFired);
   
-  this.lastStartEvent = eventFired;
+  this.lastStartEvent = ev;
     // TAP proccess
   if( this.eventHandlers['tap'] ){
     this.element.addClass(ACTIVE_CLASS_NAME); // only put the class if tapping or dragging
@@ -105,13 +83,13 @@ proto.handleMove = function(eventFired){
   callHandler( this, 'move', [ ev, eventFired ] );
 };
 proto.handleCancel = function(eventFired){
-  this.lastCancelEvent = eventFired;
+  this.lastCancelEvent = getPointerEvent(eventFired);
   callHandler( this, 'cancel', [ eventFired ] );
   this.resetState();
 };
 proto.handleEnd = function(eventFired){
   var ev = getPointerEvent(eventFired);
-  this.lastEndEvent = eventFired;
+  this.lastEndEvent = ev;
 
     // check if this is a tap:
   if( this.tapping ){
@@ -143,5 +121,12 @@ proto.handleEnd = function(eventFired){
   callHandler( this, 'end', [ ev, eventFired ] );
   this.resetState();
 };
-
+proto.unbind = function(){
+  // default implementation
+};
+proto.bind = function(){
+  
+  
+  
+};
 
