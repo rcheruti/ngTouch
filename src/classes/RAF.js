@@ -10,3 +10,5 @@ window.requestAnimationFrame = (function(){
     };
 })();
 
+window.cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame;
+

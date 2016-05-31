@@ -192,17 +192,22 @@ button.ng-click-active{
     cursor: default;
 }
 
+.Swiping .panel.swipeTrans{
+  -webkit-transition: webkit-transform 0.2s ease-out;
+  transition: transform 0.2s ease-out;
+}
+.Swiping .panel.swipeTrans.ng-swipe-drag{
+  -webkit-transition: none;
+  transition: none;
+}
+
 .Swiping .panel.swipeleft.end{
-    -webkit-transform: translate3d(-80%,0,0);
-    transform: translate3d(-80%,0,0);
-    -webkit-transition: -webkit-transform 0.2s ease-out;
-    transition: transform 0.2s ease-out;
+  -webkit-transform: translate3d(-200px,0,0);
+  transform: translate3d(-200px,0,0);
 }
 .Swiping .panel.swiperight.end{
-    -webkit-transform: translate3d(80%,0,0);
-    transform: translate3d(80%,0,0);
-    -webkit-transition: -webkit-transform 0.2s ease-out;
-    transition: transform 0.2s ease-out;
+  -webkit-transform: translate3d(200px,0,0);
+  transform: translate3d(200px,0,0);
 }
 
 .TapHold{

@@ -72,9 +72,11 @@
     </example>
  */
 
-function makeSwipeDirective(directiveName, direction, eventName) {
-  ngTouch.directive(directiveName, ['$parse', '$swipe', '$animateCss', '$window',
-      function($parse, $swipe, $animateCss, $window) {
+var SWIPE_DRAG_CLASS = 'ng-swipe-drag';
+
+function makeSwipeDirective(directiveName, direction, eventName, vertical) {
+  ngTouch.directive(directiveName, ['$parse', '$swipe', '$window',
+      function($parse, $swipe, $window) {
     // The maximum vertical delta for a swipe should be less than 75px.
     var MAX_VERTICAL_DISTANCE = 75;
     // Vertical distance should not be more than a fraction of the horizontal distance.
@@ -90,8 +92,22 @@ function makeSwipeDirective(directiveName, direction, eventName) {
                       : '';
         
       var startCoords, actualCoords, valid, animator, dragging;
-
+      
+      
+      
       function validSwipe(coords) {
+        if(!direction) return true;
+        if (!startCoords) return false;
+        var i_coords, i_startCoords;
+          // inverter as direções para swipe vertical:
+        if( vertical ){
+          i_coords = { x: coords.y, y: coords.x };
+          i_startCoords = { x: startCoords.y, y: startCoords.x };
+        }else{
+          i_coords = coords;
+          i_startCoords = startCoords;
+        }
+        
         // Check that it's within the coordinates.
         // Absolute vertical distance must be within tolerances.
         // Horizontal distance, we take the current X - the starting X.
@@ -100,9 +116,8 @@ function makeSwipeDirective(directiveName, direction, eventName) {
         // (ie. same direction as the directive wants) will have a positive delta and
         // illegal ones a negative delta.
         // Therefore this delta must be positive, and larger than the minimum.
-        if (!startCoords) return false;
-        var deltaY = Math.abs(coords.y - startCoords.y);
-        var deltaX = (coords.x - startCoords.x) * direction;
+        var deltaY = Math.abs(i_coords.y - i_startCoords.y);
+        var deltaX = (i_coords.x - i_startCoords.x) * direction;
         return valid && // Short circuit for already-invalidated swipes.
             deltaY < MAX_VERTICAL_DISTANCE &&
             deltaX > 0 &&
@@ -110,35 +125,49 @@ function makeSwipeDirective(directiveName, direction, eventName) {
             deltaY / deltaX < MAX_VERTICAL_RATIO;
       }
       function validMoveArea(coords){
+        if(!direction) return true;
         if (!startCoords) return false;
-        var deltaY = Math.abs(coords.y - startCoords.y);
-        var deltaX = (coords.x - startCoords.x) * direction;
+        var i_coords, i_startCoords;
+          // inverter as direções para swipe vertical:
+        if( vertical ){
+          i_coords = { x: coords.y, y: coords.x };
+          i_startCoords = { x: startCoords.y, y: startCoords.x };
+        }else{
+          i_coords = coords;
+          i_startCoords = startCoords;
+        }
+        
+        var deltaY = Math.abs(i_coords.y - i_startCoords.y);
+        var deltaX = (i_coords.x - i_startCoords.x) * direction;
         return deltaY < MAX_VERTICAL_DISTANCE &&
             deltaX > 0 &&
             deltaY / deltaX < MAX_VERTICAL_RATIO;
       }
+      
+      
+      
+      function cleanTransition(){
+        element.css({
+          '-webkit-transform': '',
+          'transform': '',
+        });
+      }
       function setTransition( ahead ){
-        var x = (actualCoords.x - startCoords.x);
-        if( ahead ){
-          $window.requestAnimationFrame(function(){
+        $window.requestAnimationFrame(function(){
+          if( ahead ){
+            var x = (!direction || !vertical)? (actualCoords.x - startCoords.x) : 0;
+            var y = (!direction ||  vertical)? (actualCoords.y - startCoords.y) : 0;
             element.css({
-              '-webkit-transform': 'translate3d('+x+'px,0,0)',
-              'transform': 'translate3d('+x+'px,0,0)',
+              '-webkit-transform': 'translate3d('+x+'px,'+y+'px,0)',
+              'transform': 'translate3d('+x+'px,'+y+'px,0)',
             });
-          });
-        }else{
-          animator = $animateCss( element, {
-            transitionStyle: 'transform 0.2s ease-out',
-            //from: { 'transform': 'translate3d('+x+'px,0,0)' },
-            to: { 'transform': 'translate3d(0px,0,0)' }
-          });
-          animator.start().then(function(){
+          }else{
             element.css({
-              '-webkit-transform': '',
-              'transform': '',
+              '-webkit-transform': 'translate3d(0px,0px,0px)',
+              'transform': 'translate3d(0px,0px,0px)',
             });
-          });
-        }
+          }
+        });
       }
       
       var bindHandlers = {
@@ -147,6 +176,7 @@ function makeSwipeDirective(directiveName, direction, eventName) {
           if( animator ) animator.end();
           setTransition(true);
           dragging = valid = true;
+          if(drag) element.addClass(SWIPE_DRAG_CLASS);
         },
         'cancel': function(event) {
           dragging = valid = false;
@@ -155,32 +185,23 @@ function makeSwipeDirective(directiveName, direction, eventName) {
         },
         'end': function(coords, event) {
           if (validSwipe(coords)){
-            element.css({
-              '-webkit-transform': '',
-              'transform': '',
-            });
             scope.$apply(function(){
               if( endClass ) element.addClass(endClass);
               element.triggerHandler(eventName);
               swipeHandler(scope, {$event: event});
             });
+          }
+          
+          dragging = false;
+          if(drag) element.removeClass(SWIPE_DRAG_CLASS);
+          if( endClass ){
+            cleanTransition();
           }else{
-            //var fromX = (coords.x - startCoords.x);
-            //if( fromX * direction < 0 ) return;
-            /*
-            animator = $animateCss( element, {
-              transitionStyle: 'transform 0.2s ease-out',
-              from: { 'transform': 'translate3d('+fromX+'px,0,0)' },
-              to: { 'transform': 'translate3d(0px,0,0)' }
-            });
-            animator.start();
-            */
             setTransition(false);
           }
-          dragging = false;
         },
         drag: function(coords, event){
-          return; //  <<---------
+          //return; //  <<---------
           if( !drag ) return;
           if( !validMoveArea(coords) ){
             actualCoords = startCoords;
@@ -198,6 +219,9 @@ function makeSwipeDirective(directiveName, direction, eventName) {
 }
 
 // Left is negative X-coordinate, right is positive.
-makeSwipeDirective('ngSwipeLeft', -1, 'swipeleft');
-makeSwipeDirective('ngSwipeRight', 1, 'swiperight');
+makeSwipeDirective('ngSwipeLeft', -1, 'swipeleft', false);
+makeSwipeDirective('ngSwipeRight', 1, 'swiperight', false);
+makeSwipeDirective('ngSwipeTop', -1, 'swipetop', true);
+makeSwipeDirective('ngSwipeDown', 1, 'swipedown', true);
+makeSwipeDirective('ngSwipe', 0, 'swipe', false);
 
