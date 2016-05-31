@@ -604,7 +604,7 @@ function makeSwipeDirective(directiveName, direction, eventName, vertical) {
                       $parse(attr['ngSwipeEndclass'])() || attr['ngSwipeEndclass']
                       : '';
         
-      var startCoords, actualCoords, valid, animator, dragging;
+      var startCoords, actualCoords, valid, animator, dragging, rafOn = false, ahead;
       
       
       
@@ -665,7 +665,10 @@ function makeSwipeDirective(directiveName, direction, eventName, vertical) {
           'transform': '',
         });
       }
-      function setTransition( ahead ){
+      function setTransition( _ahead ){
+        ahead = _ahead;
+        if( rafOn ) return;
+        rafOn = true;
         $window.requestAnimationFrame(function(){
           if( ahead ){
             var x = (!direction || !vertical)? (actualCoords.x - startCoords.x) : 0;
@@ -680,6 +683,7 @@ function makeSwipeDirective(directiveName, direction, eventName, vertical) {
               'transform': 'translate3d(0px,0px,0px)',
             });
           }
+          rafOn = false;
         });
       }
       
